@@ -1,0 +1,44 @@
+<?php
+
+/**
+ * @file
+ * Installation and schema hooks for videoentity.module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function chat_schema() {
+  $schema = array();
+  $schema['sms'] = array(
+    'description' => 'The base table for the sms entity',
+    'fields' => array(
+      'id' => array(
+        'description' => 'Primary key of the sms entity',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'mobile' => array(
+        'description' => 'Mobile Number',
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+      ),
+      'message' => array(
+        'description' => 'Message',
+        'type' => 'text',
+        'length' => '1023',
+        'not null' => TRUE,
+      ),
+      'created_at' => array(
+        'description' => 'Date and time the  sms was processed.',
+        'type' => 'int',
+        'length' => 10,
+        'not null' => FALSE,
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+  return $schema;
+}

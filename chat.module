@@ -1,0 +1,245 @@
+<?php
+
+/**
+ * Implements hook_permission().
+ */
+function chat_permission() {
+  return array(
+    'administer sms' => array(
+      'title' => t('Administer Chat SMS'),
+    ),
+  );
+}
+
+function chat_menu() {
+  $items['sms/%'] = array(
+    'title' => 'SMS',
+    'page callback' => 'smsentity_view_entity',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+  );
+  $items['api'] = array(
+    'title' => 'SMS POST API',
+    'page callback' => 'sms_api',
+    'access callback' => TRUE,
+  );
+  return $items;
+}
+
+function sms_api() {
+//  dsm($_REQUEST);
+  $message = urldecode($_REQUEST['text']);
+  $prefix = substr($message, 0, 4);
+  if (strtolower($prefix) == 'chat') {
+    $message = trim(substr($message, 4));
+    $new_sms = entity_create('sms', array(
+      'type' => 'sms', //bundle
+      'mobile' => check_plain($_REQUEST['phone']),
+      'message' => $message,
+        ))->save();
+    dsm($new_sms);
+  }
+  return "Message Posted";
+}
+
+function chat_entity_info() {
+  $info = array();
+  // Our custom video entity needs to be defined here.
+  // See http://drupal.org/node/1026420 and http://drupal.org/node/878804
+  // for more documentation.
+  $info['sms'] = array(
+    // Human readable label.
+    'label' => t('SMS'),
+    // Table for storing entity data, defined in hook_schema().
+    'base table' => 'sms',
+    // This helps Entity API know how to query your custom table.
+    'entity keys' => array(
+      'id' => 'id',
+      'label' => 'mobile',
+    ),
+    // These are the default controllers.
+    // 'entity class' => 'Entity',
+    'entity class' => 'SMSEntity',
+    // This is a uri function provided by the Entity contrib module.
+    // It's a simple wrapper around the uri method in the controller class.
+    'uri callback' => 'entity_class_uri',
+    // 'controller class' => 'DrupalDefaultEntityController',
+    // Other options provided by the EntityAPI contrib module:
+    // 'controller class' => 'EntityAPIController ',
+    // 'controller class' => 'EntityAPIControllerExportable',
+    'controller class' => 'SMSEntityController',
+    // The information below is used to extend the EntityDefaultUIController
+    'admin ui' => array(
+      'path' => 'admin/sms',
+      'controller class' => 'SMSEntityUIController',
+      'menu wildcard' => '%entity_object',
+      'file' => 'sms.admin.inc',
+    ),
+    //Inside of the default ui controller, there is some code that requires this
+    //for creating the appropriate hook_menu equivalents
+    'module' => 'chat',
+    // Access callback to determine permisisons.
+    'access callback' => 'sms_access_callback',
+    /////////*********NEW//////////////////////////////////////
+    // Tell FieldAPI that fields can be attached to our video entity
+    'fieldable' => TRUE,
+    'bundles' => array(
+      'sms' => array(
+        'label' => t('SMS'),
+        'admin' => array(
+          'path' => 'admin/sms',
+          'access arguments' => array('administer sms'),
+        ),
+      ),
+    ),
+    // Add views support
+    'module' => 'chat',
+    'views controller class' => 'SMSEntityViewsController',
+  );
+
+  return $info;
+}
+
+/**
+ * Our custom entity class.
+ *
+ * The Entity class we're overriding is in
+ * sites/all/modules/contrib/entity/includes/entity.inc
+ */
+class SMSEntity extends Entity {
+
+  /**
+   * Override this in order to implement a custom default URI.
+   */
+  protected function defaultUri() {
+    return array('path' => 'sms/' . $this->identifier());
+  }
+
+}
+
+/**
+ * Callback for /video/ID page.
+ *
+ * Just a place to render a complete video entity.
+ */
+function smsentity_view_entity($smsid) {
+  $sms = entity_load_single('sms', $smsid);
+  drupal_set_title($sms->mobile);
+  $sms_entity = entity_view('sms', array($smsid => $sms));
+  return $sms_entity;
+}
+
+class SMSEntityController extends EntityAPIController {
+
+  public function buildContent($entity, $view_mode = 'full', $langcode = NULL) {
+    $build = parent::buildContent($entity, $view_mode, $langcode);
+
+    $build['mobile'] = array(
+      '#type' => 'markup',
+      '#markup' => $entity->mobile,
+    );
+
+    $build['message'] = array(
+      '#type' => 'markup',
+      '#markup' => $entity->message,
+    );
+
+    return $build;
+  }
+
+  /**
+   * Override save method.
+   *
+   * Populate created and updated dates automatically.
+   */
+  public function save($entity, DatabaseTransaction $transaction = NULL) {
+    if (isset($entity->is_new)) {
+      $entity->created_at = REQUEST_TIME;
+    }
+
+    $entity->message = trim($entity->message);
+
+    return parent::save($entity, $transaction);
+  }
+
+}
+
+/**
+ * Check access permissions for video entities.
+ */
+function sms_access_callback($op, $sms = NULL, $account = NULL) {
+  if (user_access('administer sms', $account)) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+/**
+ * Our custom controller for the admin ui.
+ *
+ * The EntityDefaultUIController can be found in
+ * sites/all/modules/contrib/entity/includes/entity.ui.inc
+ */
+class SMSEntityUIController extends EntityDefaultUIController {
+
+  protected function overviewTableHeaders($conditions, $rows, $additional_header = array()) {
+    $header = parent::overviewTableHeaders($conditions, $rows, array('Message', 'Received'));
+    return $header;
+  }
+
+  protected function overviewTableRow($conditions, $id, $entity, $additional_cols = array()) {
+    $diff = time() - $entity->created_at;
+    $time_ago = format_interval($diff);
+    $row = parent::overviewTableRow($conditions, $id, $entity, array($entity->message, $time_ago));
+    // Add your custom data here
+    return $row;
+  }
+
+}
+
+class SMSEntityViewsController extends EntityDefaultViewsController {
+
+  /**
+   *  Add extra fields to views_data().
+   */
+  public function views_data() {
+    $data = parent::views_data();
+    // Add your custom data here
+    return $data;
+  }
+
+}
+
+/**
+ * Implements hook_entity_property_info().
+ */
+function chat_entity_property_info() {
+  $info = array();
+  $properties = &$info['sms']['properties'];
+  $properties['id'] = array(
+    'label' => t('SMS ID'),
+    'description' => t('The uniquie ID of the video.'),
+    'type' => 'integer',
+    'schema field' => 'id',
+  );
+  $properties['mobile'] = array(
+    'label' => t('Mobile No'),
+    'description' => t('Mobile No'),
+    'type' => 'text',
+    'schema field' => 'mobile',
+  );
+  $properties['message'] = array(
+    'label' => t('Embedcode'),
+    'description' => t('SMS Message'),
+    'type' => 'text',
+    'schema field' => 'message',
+  );
+  $properties['created_at'] = array(
+    'label' => t('Created date'),
+    'description' => t('Date the SMS was created'),
+    'type' => 'date',
+    'schema field' => 'created_at',
+  );
+  
+  return $info;
+}

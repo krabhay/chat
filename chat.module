@@ -44,7 +44,7 @@ function sms_api() {
 
 function chat_entity_info() {
   $info = array();
-  // Our custom video entity needs to be defined here.
+  // Our custom sms entity needs to be defined here.
   // See http://drupal.org/node/1026420 and http://drupal.org/node/878804
   // for more documentation.
   $info['sms'] = array(
@@ -80,8 +80,7 @@ function chat_entity_info() {
     'module' => 'chat',
     // Access callback to determine permisisons.
     'access callback' => 'sms_access_callback',
-    /////////*********NEW//////////////////////////////////////
-    // Tell FieldAPI that fields can be attached to our video entity
+    // Tell FieldAPI that fields can be attached to our sms entity
     'fieldable' => TRUE,
     'bundles' => array(
       'sms' => array(
@@ -118,9 +117,9 @@ class SMSEntity extends Entity {
 }
 
 /**
- * Callback for /video/ID page.
+ * Callback for /sms/ID page.
  *
- * Just a place to render a complete video entity.
+ * Just a place to render a complete sms entity.
  */
 function smsentity_view_entity($smsid) {
   $sms = entity_load_single('sms', $smsid);
@@ -165,7 +164,7 @@ class SMSEntityController extends EntityAPIController {
 }
 
 /**
- * Check access permissions for video entities.
+ * Check access permissions for sms entities.
  */
 function sms_access_callback($op, $sms = NULL, $account = NULL) {
   if (user_access('administer sms', $account)) {
@@ -218,7 +217,7 @@ function chat_entity_property_info() {
   $properties = &$info['sms']['properties'];
   $properties['id'] = array(
     'label' => t('SMS ID'),
-    'description' => t('The uniquie ID of the video.'),
+    'description' => t('The uniquie ID of the sms.'),
     'type' => 'integer',
     'schema field' => 'id',
   );
@@ -240,6 +239,6 @@ function chat_entity_property_info() {
     'type' => 'date',
     'schema field' => 'created_at',
   );
-  
+
   return $info;
 }

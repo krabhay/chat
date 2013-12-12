@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Form for adding / editing a video entity.
+ * Form for adding / editing a sms entity.
  */
 function sms_form($form, &$form_state, $sms = NULL) {
   $form['mobile'] = array(
@@ -36,16 +36,7 @@ function sms_form($form, &$form_state, $sms = NULL) {
 }
 
 /**
- * Validation for sms entity form.
- */
-//function sms_form_validate($form, &$form_state) {
-//  if (isset($form_state['values']['duration']) && !is_numeric($form_state['values']['duration'])) {
-//    form_set_error('duration', t('Duration field must be an integer value.'));
-//  }
-//}
-
-/**
- * Submit handler for video entity form.
+ * Submit handler for sms entity form.
  */
 function sms_form_submit($form, &$form_state) {
   $sms = entity_ui_form_submit_build_entity($form, $form_state);
